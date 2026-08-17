@@ -1,0 +1,301 @@
+{
+  "name": "Daily Operations Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -496,
+        -80
+      ],
+      "id": "fa4b4674-2e9b-4cea-8479-380ee91ac4a3",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Daily Ops Data"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Date",
+              "lookupValue": "={{ $now.minus({days:1}).toFormat('yyyy-MM-dd') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -288,
+        -80
+      ],
+      "id": "e595a267-b34b-403d-9e51-4290d66c91e0",
+      "name": "Get row(s) in sheet"
+    },
+    {
+      "parameters": {
+        "jsCode": "for (const item of $input.all()) {\n  if (!item.json.Tickets || item.json.Tickets === '?') \n    item.json.Tickets = 0;\n  if (!item.json.Calls || item.json.Calls === '?') \n    item.json.Calls = 0;\n  if (!item.json.Complaints || item.json.Complaints === '?') \n    item.json.Complaints = 'Unknown';\n  if (!item.json.SLA_Breaches || item.json.SLA_Breaches === '?') \n    item.json.SLA_Breaches = 0;\n}\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        -80
+      ],
+      "id": "cc5cf5a0-37c4-4b96-9300-998a5b1325b0",
+      "name": "Sanitize"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f8c2b388-4093-4213-915f-7bd74e2c0c5f",
+              "leftValue": "={{ $json.Date }}",
+              "rightValue": "",
+              "operator": {
+                "type": "dateTime",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "fc147481-cbd9-4fe3-a5e1-a7a391996dc8",
+              "leftValue": "={{ $json.Tickets }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "d8f6c100-025c-4df5-a11e-d7f5d6436b25",
+              "leftValue": "={{ $json.Calls }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "b113ed58-708f-4f34-8a47-27f842adda44",
+              "leftValue": "={{ $json.Complaints }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        128,
+        -80
+      ],
+      "id": "c8429671-e650-4d26-be07-7af22f44a4ae",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\nconst table = `*📊 Daily Operations Report — ${item.Date}*\n\n| Metric | Value |\n|--------|-------|\n| Tickets | ${item.Tickets} |\n| Calls | ${item.Calls} |\n| Complaints | ${item.Complaints} |\n| SLA Breaches | ${item.SLA_Breaches} |`;\n\nreturn [{ json: { report: table, data: item } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        336,
+        -176
+      ],
+      "id": "d8e5ae5d-2edb-45b8-991e-81be6a261f12",
+      "name": "Format"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Given this data: Tickets: {{ $('Format').item.json.data.Tickets }}, \nCalls: {{ $('Format').item.json.data.Calls }}, \nComplaints: {{ $('Format').item.json.data.Complaints }}, \nSLA Breaches: {{ $('Format').item.json.data.SLA_Breaches }}. \nWrite ONE short sentence summarizing today's operations.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        544,
+        -176
+      ],
+      "id": "8c7176ad-ab9b-4457-8b37-ab262743189a",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        32
+      ],
+      "id": "d41b9c7d-33b6-4bf8-b393-454ac4a09144",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "#daily-ops-report",
+          "mode": "name"
+        },
+        "text": "={{ $('Format').item.json.report }}\n\n{{ $('AI Agent').item.json.output }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        848,
+        -192
+      ],
+      "id": "50ef5c84-cd53-48e1-a91e-b3e7d3905969",
+      "name": "Send a message"
+    },
+    {
+      "parameters": {
+        "content": "DATA CLEANING STEP — Raw data from Google Sheets \ncan have blanks or invalid entries. This Sanitize \nnode fills missing numeric fields with 0 and missing \ntext fields with \"Unknown\" so the rest of the workflow \nnever breaks on bad data. The Format node then turns \nthis clean data into a readable Markdown table for Slack.",
+        "height": 208,
+        "width": 368
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -688,
+        -352
+      ],
+      "typeVersion": 1,
+      "id": "af933b53-d3eb-4296-838e-c2dcea219b25",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Sanitize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fd6f9ac4-4425-49a9-96ba-1e51254125a1",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "VrXDovZZoVVFVTBW",
+  "tags": []
+}
