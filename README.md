@@ -33,3 +33,4 @@ The goal is to build workflows that reduce repetitive work, connect different sy
 Each project is organized in its own folder and includes its workflow file and documentation explaining how it works.
 
 This repository is continuously evolving as I build and experiment with new automation ideas.
+
